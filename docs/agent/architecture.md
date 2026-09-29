@@ -11,7 +11,7 @@ review inside subagents.
 The intended primary session configuration is:
 
 ```text
-Model: GPT-6 Sol
+Model: GPT-6.1 Sol
 Reasoning: Medium
 Selected through: T3 Code
 ```

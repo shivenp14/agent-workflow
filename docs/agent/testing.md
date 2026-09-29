@@ -28,7 +28,7 @@ Use the normal primary coding model without delegated workers.
 For the intended setup:
 
 ```text
-GPT-6 Sol
+GPT-6.1 Sol
 Medium reasoning
 ```
 
@@ -46,7 +46,7 @@ Use:
 
 ```text
 Coordinator:
-GPT-6 Sol
+GPT-6.1 Sol
 Medium reasoning
 
 Default workers:
@@ -241,7 +241,7 @@ Avoid changing the entire architecture after one failed task.
 ## Initial Recommendation
 
 Begin with:
-- Sol Medium as coordinator;
+- GPT-6.1 Sol Medium as coordinator;
 - Luna High as default worker;
 - highest Luna reasoning only by escalation;
 - maximum four open subagent threads;
