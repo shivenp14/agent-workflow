@@ -1,105 +1,38 @@
-# Agent Operating Policy
+# Source repository instructions
 
-For substantial software tasks, act as the coordinating agent.
+This repository maintains an installable workflow in `workflow/`. Keep shared
+agent instructions, configuration, skills, and target documentation there.
+Keep source maintenance commands, tests, and repository-specific guidance
+outside that directory.
 
-Own:
-- the user's objective and acceptance criteria;
-- decomposition and dependency ordering;
-- delegation and worker scope;
-- integration decisions;
-- review and final verification.
+Use `./scripts/update-models --show` to inspect model assignments. For a model
+change, preview the requested `--orchestrator` and/or `--subagent` options with
+`--dry-run`, apply the same options, then verify with `--show` and a no-change
+preview. The orchestrator value documents the recommended model; runtime
+selection remains in T3 Code. The subagent value updates the shared default and
+all worker definitions. Reasoning settings are preserved. Model availability
+is not checked.
 
-Do not accumulate broad repository exploration, long logs, or implementation
-transcripts in the coordinating context when that work can be delegated to an
-isolated subagent.
+Use `./scripts/sync-workflow TARGET --dry-run` to preview distribution and
+`./scripts/sync-workflow TARGET` to apply it. The script installs only its
+explicit target-relative allowlist from `workflow/`; root instructions,
+maintenance scripts, tests, and model/sync guidance are source-only. The
+registry remains `.workflow-sync-state.json` at this repository root, and its
+hash keys match the paths installed in targets. `--all` uses registered
+targets. Registration only records a target; it does not write to it.
 
-## Work Directly When Appropriate
+Both commands resolve source files from their script location and work from
+any current directory. Exit code 0 means success, including a no-op. Exit code
+2 reports invalid input, inconsistent source, a target conflict, or an I/O
+failure. Review the error and correct the source or target before retrying.
+Tests use temporary source and target directories; do not point tests at real
+projects or the root sync registry.
 
-Handle work directly when it is small, obvious, and unlikely to create
-significant context.
-
-Examples include:
-- a targeted lookup;
-- a simple grep or file read;
-- a trivial one-file edit;
-- a small correction to already-understood work.
-
-Do not spawn a subagent merely to avoid a cheap operation.
-
-## Orchestrate Substantial Work
-
-For substantial implementation, broad repository exploration, noisy debugging,
-multi-file changes, separable workstreams, or independent review, use the
-`orchestrate` skill.
-
-Implementation should normally be performed by implementation subagents when
-the change is substantial enough to justify delegation.
-
-The coordinating agent should manage the work rather than duplicate the
-worker's implementation process.
-
-Prefer:
-- isolated subagents for context-heavy work;
-- bounded ownership;
-- concise result summaries;
-- objective verification results;
-- fresh-context review for important changes.
-
-Parallelize only genuinely independent work.
-
-Never assign overlapping write ownership to concurrent subagents.
-
-## Worker Selection
-
-Use the repository's Codex custom agents according to their execution boundary:
-
-- `explorer` for read-only repository investigation;
-- `implementer` for bounded implementation, testing, and debugging;
-- `reviewer` for independent read-only review.
-
-Use the default subagent reasoning effort for normal delegated work.
-
-Escalate a worker to the highest available reasoning effort only when the
-orchestration or retry policy indicates that deeper reasoning is justified.
-
-Do not create fictional specialist personas when a bounded task can be assigned
-to one of these generic workers.
-
-## Context Discipline
-
-Retrieve detailed source context only when needed for coordination or
-integration.
-
-Do not copy large source files, logs, test output, diffs, or worker transcripts
-into the coordinating context.
-
-Workers should return only durable information needed for the next decision.
-
-Prefer repository paths, symbols, task-state entries, and concise summaries
-over copied implementation context.
-
-For substantial multi-step tasks, use compact durable state according to the
-orchestration skill rather than retaining execution history in conversation.
-
-## Review and Verification
-
-Do not mark substantial work complete solely because a subagent reports
-success.
-
-Use independent review when the orchestration policy calls for it.
-
-Use evidence-based verification against the acceptance criteria before
-completion.
-
-A passing worker report is useful state, not proof by itself.
-
-## Completion
-
-Before completing substantial work, confirm:
-- the acceptance criteria;
-- relevant verification results;
-- integration state;
-- substantive review findings;
-- genuine remaining risks or limitations.
-
-Keep the final user-facing result concise and focused on outcomes.
+For substantial work, follow the shared process in
+[`workflow/.agents/skills/orchestrate/SKILL.md`](workflow/.agents/skills/orchestrate/SKILL.md).
+Use the review and verification skills under `workflow/.agents/skills/` when
+their respective tasks apply. Use configured custom agent roles when they are
+available; otherwise assign bounded work to default workers. These nested
+`.agents/` skills and `.codex/` definitions are installation assets for target
+repositories, not active source-repo runtime configuration. Do not copy their
+shared policy into this file.

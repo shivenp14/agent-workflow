@@ -10,11 +10,9 @@ review inside subagents.
 
 The intended primary session configuration is:
 
-```text
-Model: GPT-6.1 Sol
-Reasoning: Medium
-Selected through: T3 Code
-```
+- Model: <!-- agent-workflow-model:orchestrator:full:gpt-6.1-sol -->GPT-6.1 Sol<!-- /agent-workflow-model -->
+- Reasoning: Medium
+- Selected through: T3 Code
 
 The repository does not hard-code the parent model.
 
@@ -40,10 +38,8 @@ The coordinator is not the default implementation worker for substantial work.
 
 The default worker configuration is:
 
-```text
-Model: GPT-6 Luna
-Reasoning: High
-```
+- Model: <!-- agent-workflow-model:subagent:full:gpt-6-luna -->GPT-6 Luna<!-- /agent-workflow-model -->
+- Reasoning: High
 
 A worker may be spawned with the highest available supported reasoning effort
 when deeper reasoning is justified by task difficulty, risk, or repeated

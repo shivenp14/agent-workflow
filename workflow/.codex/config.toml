@@ -6,7 +6,7 @@ enabled = true
 max_concurrent_threads_per_session = 4
 
 # The primary model is selected in T3 Code.
-# Spawned workers default to Luna.
+# Spawned workers use the configured default model.
 default_subagent_model = "gpt-6-luna"
 
 # Normal worker tasks begin at High reasoning.

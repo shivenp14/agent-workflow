@@ -18,6 +18,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+WORKFLOW = ROOT / "workflow"
 REGISTRY = ROOT / ".workflow-sync-state.json"
 MARKDOWN_BEGIN = "<!-- agent-workflow:begin -->"
 MARKDOWN_END = "<!-- agent-workflow:end -->"
@@ -97,31 +98,34 @@ def atomic_write(path: Path, data: bytes, default_mode: int = 0o644) -> None:
 
 
 def source_bytes(relative: str) -> bytes:
-    path = ROOT / relative
+    path = WORKFLOW / relative
     if path.is_symlink() or not path.is_file():
-        raise SyncError(f"workflow source is missing or unsafe: {relative}")
+        raise SyncError(f"workflow source is missing or unsafe: workflow/{relative}")
     return path.read_bytes()
 
 
 def historical_bytes(relative: str) -> list[bytes]:
-    """Return exact earlier versions from this source repository, when available."""
-    try:
-        commits = subprocess.run(
-            ["git", "log", "--all", "--format=%H", "--", relative],
-            cwd=ROOT, check=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
-        ).stdout.splitlines()
-    except (OSError, subprocess.CalledProcessError):
-        return []
+    """Return exact versions, including history before files moved to workflow/."""
     found: list[bytes] = []
     seen: set[bytes] = set()
-    for commit in commits:
-        result = subprocess.run(
-            ["git", "show", f"{commit}:{relative}"], cwd=ROOT,
-            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-        )
-        if result.returncode == 0 and result.stdout not in seen:
-            seen.add(result.stdout)
-            found.append(result.stdout)
+    # Keep the target-relative path stable while checking both repository paths:
+    # existing targets may contain a bootstrap from before the source move.
+    for git_path in (f"workflow/{relative}", relative):
+        try:
+            commits = subprocess.run(
+                ["git", "log", "--all", "--format=%H", "--", git_path],
+                cwd=ROOT, check=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+            ).stdout.splitlines()
+        except (OSError, subprocess.CalledProcessError):
+            continue
+        for commit in commits:
+            result = subprocess.run(
+                ["git", "show", f"{commit}:{git_path}"], cwd=ROOT,
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            )
+            if result.returncode == 0 and result.stdout not in seen:
+                seen.add(result.stdout)
+                found.append(result.stdout)
     return found
 
 
@@ -195,7 +199,7 @@ def parsed_toml(data: bytes, rel: str) -> dict:
 
 def verify_toml(data: bytes) -> None:
     parsed = parsed_toml(data, ".codex/config.toml")
-    source = parsed_toml(source_bytes(".codex/config.toml"), "workflow source .codex/config.toml")
+    source = parsed_toml(source_bytes(".codex/config.toml"), "workflow/.codex/config.toml")
     if parsed.get("agents") != source.get("agents"):
         raise SyncError("merged TOML does not contain the workflow's complete [agents] table")
 
@@ -261,7 +265,7 @@ def prepare_toml(target: Path, rel: str, previous: str | None) -> Change:
     source = source_bytes(rel)
     source_table = toml_agents_table(source)
     if source_table is None:
-        raise SyncError("workflow source .codex/config.toml has no [agents] table")
+        raise SyncError("workflow/.codex/config.toml has no [agents] table")
     table = source_table[2]
     path = target / rel
     exists = path.exists() or path.is_symlink()

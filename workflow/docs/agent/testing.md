@@ -27,10 +27,8 @@ Use the normal primary coding model without delegated workers.
 
 For the intended setup:
 
-```text
-GPT-6.1 Sol
-Medium reasoning
-```
+- Model: <!-- agent-workflow-model:orchestrator:full:gpt-6.1-sol -->GPT-6.1 Sol<!-- /agent-workflow-model -->
+- Reasoning: Medium
 
 Let the primary model perform:
 - exploration;
@@ -44,19 +42,9 @@ Let the primary model perform:
 
 Use:
 
-```text
-Coordinator:
-GPT-6.1 Sol
-Medium reasoning
-
-Default workers:
-GPT-6 Luna
-High reasoning
-
-Escalated workers:
-GPT-6 Luna
-highest supported reasoning effort when justified
-```
+- Coordinator: <!-- agent-workflow-model:orchestrator:full:gpt-6.1-sol -->GPT-6.1 Sol<!-- /agent-workflow-model -->, Medium reasoning
+- Default workers: <!-- agent-workflow-model:subagent:full:gpt-6-luna -->GPT-6 Luna<!-- /agent-workflow-model -->, High reasoning
+- Escalated workers: <!-- agent-workflow-model:subagent:full:gpt-6-luna -->GPT-6 Luna<!-- /agent-workflow-model -->, highest supported reasoning effort when justified
 
 Use the repository orchestration policy normally.
 
@@ -241,9 +229,9 @@ Avoid changing the entire architecture after one failed task.
 ## Initial Recommendation
 
 Begin with:
-- GPT-6.1 Sol Medium as coordinator;
-- Luna High as default worker;
-- highest Luna reasoning only by escalation;
+- <!-- agent-workflow-model:orchestrator:full:gpt-6.1-sol -->GPT-6.1 Sol<!-- /agent-workflow-model --> Medium as coordinator;
+- <!-- agent-workflow-model:subagent:short:gpt-6-luna -->Luna<!-- /agent-workflow-model --> High as default worker;
+- highest <!-- agent-workflow-model:subagent:short:gpt-6-luna -->Luna<!-- /agent-workflow-model --> reasoning only by escalation;
 - maximum four open subagent threads;
 - one explorer only when architecture is unclear;
 - bounded implementation workers;

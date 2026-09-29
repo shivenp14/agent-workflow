@@ -2,6 +2,7 @@ import importlib.util
 import json
 import copy
 import stat
+import subprocess
 import sys
 import tempfile
 import tomllib
@@ -53,7 +54,7 @@ class SyncWorkflowTests(unittest.TestCase):
         self.assertTrue(first)
         parsed = tomllib.loads(config.read_text(encoding="utf-8"))
         self.assertEqual(parsed["project"]["name"], "demo")
-        self.assertEqual(parsed["agents"], tomllib.loads((sync.ROOT / ".codex/config.toml").read_text())["agents"])
+        self.assertEqual(parsed["agents"], tomllib.loads((sync.WORKFLOW / ".codex/config.toml").read_text())["agents"])
         self.assertEqual(unrelated.read_text(encoding="utf-8"), "keep me")
         second = sync.sync_one(str(self.target), state, False)
         self.assertEqual(second, [f"unchanged: {self.target}"])
@@ -193,6 +194,36 @@ class SyncWorkflowTests(unittest.TestCase):
                 self.assertEqual(sync.main(["--register", str(self.target), "--dry-run"]), 0)
                 save.assert_not_called()
             self.assertFalse(self.registry.exists())
+
+    def test_sync_source_is_workflow_tree_and_allowlist_excludes_repo_tools(self):
+        self.assertTrue((sync.WORKFLOW / "AGENTS.md").is_file())
+        self.assertIn("Source repository instructions", (sync.ROOT / "AGENTS.md").read_text())
+        self.assertNotIn("README.md", sync.OWNED)
+        self.assertNotIn("scripts/sync_workflow.py", sync.OWNED)
+        self.assertNotIn("docs/agent/models.md", sync.OWNED)
+        with patch.object(sync, "REGISTRY", self.registry):
+            plan = sync.sync_one(str(self.target), self.registry_value(), False)
+        self.assertTrue(all(str(self.target) in line for line in plan))
+        self.assertFalse((self.target / "README.md").exists())
+        self.assertFalse((self.target / "scripts").exists())
+        synced_agents = (self.target / "AGENTS.md").read_text()
+        self.assertIn("Agent Operating Policy", synced_agents)
+        self.assertNotIn("Source repository instructions", synced_agents)
+
+    def test_historical_lookup_checks_both_pre_move_and_workflow_git_paths(self):
+        calls = []
+
+        def fake_run(args, **kwargs):
+            calls.append(args)
+            if args[1] == "log":
+                return subprocess.CompletedProcess(args, 0, stdout="commit\n")
+            return subprocess.CompletedProcess(args, 0, stdout=b"historical")
+
+        with patch.object(sync.subprocess, "run", side_effect=fake_run):
+            found = sync.historical_bytes("AGENTS.md")
+        self.assertEqual(found, [b"historical"])
+        self.assertIn(["git", "log", "--all", "--format=%H", "--", "workflow/AGENTS.md"], calls)
+        self.assertIn(["git", "log", "--all", "--format=%H", "--", "AGENTS.md"], calls)
 
 
 if __name__ == "__main__":

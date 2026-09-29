@@ -1,6 +1,12 @@
 # Syncing the workflow into project repositories
 
-`scripts/sync-workflow` (or `python3 scripts/sync_workflow.py`) copies the repository's allowlisted workflow files into a project directory. It supports Python 3.11 or newer.
+`scripts/sync-workflow` (or `python3 scripts/sync_workflow.py`) copies the
+explicit allowlist from this repository's `workflow/` source directory into a
+project directory. Output paths name the target files; source validation
+errors identify `workflow/...` paths. It supports Python 3.11 or newer.
+
+To update the workflow's orchestrator or spawned-worker model references before
+syncing them to projects, see [Updating workflow model assignments](models.md).
 
 ```sh
 ./scripts/sync-workflow /path/to/project --dry-run
@@ -12,7 +18,7 @@
 ./scripts/sync-workflow --unregister /path/to/project
 ```
 
-The local registry and each target's last installed hashes are stored in the ignored `.workflow-sync-state.json` file at the workflow repository root. Registration does not change a target. `--all` first validates every registered target, then syncs them; an invalid target prevents target writes. `--dry-run` performs the same validation and prints the planned changes without changing targets or the registry. The sync never deletes unrelated files.
+The local registry and each target's last installed hashes are stored in the ignored `.workflow-sync-state.json` file at this source repository root. Registry hash keys remain target-relative (for example, `AGENTS.md`), independent of the `workflow/` source prefix. Registration does not change a target. `--all` first validates every registered target, then syncs them; an invalid target prevents target writes. `--dry-run` performs the same validation and prints the planned target changes without changing targets or the registry. The sync never deletes unrelated files.
 
 `AGENTS.md` is managed between `<!-- agent-workflow:begin -->` and `<!-- agent-workflow:end -->`. `.codex/config.toml` manages the complete `[agents]` table between `# agent-workflow:begin` and `# agent-workflow:end`; other TOML tables remain project-owned and are preserved. Any custom keys or settings in `[agents]` cause a conflict because the complete table belongs to this workflow. Resolve those settings deliberately with the project owner, then leave a single workflow-owned `[agents]` table; do not rename settings into another table unless the consuming tool supports that table.
 
