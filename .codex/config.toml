@@ -1,0 +1,15 @@
+[agents]
+enabled = true
+
+# Maximum concurrently open spawned-agent threads.
+# The primary/orchestrator thread is not counted.
+max_concurrent_threads_per_session = 4
+
+# The primary model is selected in T3 Code.
+# Spawned workers default to Luna.
+default_subagent_model = "gpt-6-luna"
+
+# Normal worker tasks begin at High reasoning.
+# The orchestrator may explicitly request a higher supported reasoning effort
+# for an individual worker when the orchestration policy justifies escalation.
+default_subagent_reasoning_effort = "high"
