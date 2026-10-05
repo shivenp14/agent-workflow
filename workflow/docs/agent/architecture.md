@@ -41,6 +41,14 @@ The default worker configuration is:
 - Model: <!-- agent-workflow-model:subagent:full:gpt-6-luna -->GPT-6 Luna<!-- /agent-workflow-model -->
 - Reasoning: High
 
+The coordinator must explicitly select the configured worker model and
+reasoning effort when launching a worker. A custom role's model field or a
+native tool description does not establish which settings the runtime applied.
+In T3 Code, use the live `orchestrator_capabilities` catalog and `delegate_task`
+when native tools cannot explicitly select the required settings. The launch
+procedure is documented in the `orchestrate` skill; check returned runtime
+metadata where available and report any unverified settings.
+
 A worker may be spawned with the highest available supported reasoning effort
 when deeper reasoning is justified by task difficulty, risk, or repeated
 reasoning failure.

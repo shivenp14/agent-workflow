@@ -109,6 +109,46 @@ Never give concurrent implementation workers overlapping write ownership.
 
 ## 5. Dispatch workers with a compact contract
 
+### Select the worker runtime explicitly
+
+Before launching workers, read `[agents].default_subagent_model` and
+`[agents].default_subagent_reasoning_effort` in `.codex/config.toml`, along with
+the selected `.codex/agents/<role>.toml`. Resolve any inconsistent model
+assignments before dispatch. Use the configured reasoning effort unless the
+escalation policy below applies.
+
+Pass the chosen model and reasoning effort explicitly in the launch tool's
+supported fields. Do not rely on a role name, a tool description mentioning a
+model, or omitted arguments to enforce the repository configuration. Avoid
+inheriting the coordinator's model, reasoning effort, or full conversation.
+
+In T3 Code:
+- Call `orchestrator_capabilities` to discover provider instance IDs, model IDs,
+  and supported model options from the live catalog.
+- Prefer native subagent tools for same-provider work only when they can
+  explicitly select the required model and reasoning effort with compact
+  starting context. Use a fresh or limited context mode when required by the
+  native tool to permit model overrides.
+- Otherwise use `delegate_task`, including for same-provider work. Set
+  `target.providerInstanceId`, `target.model`, and the reasoning option in
+  `target.options` using the IDs returned by the catalog. Model options also
+  inherit when omitted, so explicitly set the configured reasoning effort.
+- Include the selected role's instructions and execution constraints in the
+  bounded task prompt when the tool does not load custom roles. Use available
+  runtime controls to enforce the required execution boundary; do not claim
+  that a read-only prompt provides a read-only sandbox.
+- Retain the returned `taskId` for `task_status` and `task_cancel`. Do not use
+  top-level thread creation as a substitute for a delegated task.
+
+Check launch metadata against the requested model and reasoning effort wherever
+the runtime exposes them. If the runtime reports a mismatch, stop the wrong
+worker before launching a replacement. If a setting cannot be selected or
+verified, report the limitation rather than claiming it was applied. If the
+configured model or required reasoning option is unavailable, do not silently
+substitute the coordinator's settings.
+
+### Provide the bounded task
+
 Every delegated prompt should contain only:
 
 OBJECTIVE

@@ -59,6 +59,13 @@ Use the repository's Codex custom agents according to their execution boundary:
 
 Use the default subagent reasoning effort for normal delegated work.
 
+Before dispatch, read the configured worker model and reasoning effort from
+`.codex/config.toml` and the selected role definition. Explicitly select those
+settings in the launch call; a role name or tool description is not evidence
+that the runtime will apply them. Follow the `orchestrate` skill's worker
+launch procedure, including its T3 fallback when native tools cannot select
+the required settings. Do not silently inherit the coordinator's settings.
+
 Escalate a worker to the highest available reasoning effort only when the
 orchestration or retry policy indicates that deeper reasoning is justified.
 
