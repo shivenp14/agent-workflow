@@ -44,10 +44,13 @@ The default worker configuration is:
 The coordinator must explicitly select the configured worker model and
 reasoning effort when launching a worker. A custom role's model field or a
 native tool description does not establish which settings the runtime applied.
-In T3 Code, use the live `orchestrator_capabilities` catalog and `delegate_task`
-when native tools cannot explicitly select the required settings. The launch
-procedure is documented in the `orchestrate` skill; check returned runtime
-metadata where available and report any unverified settings.
+In T3 Code, every worker must be a T3-owned child launched with `delegate_task`
+and explicit provider, model, and reasoning settings from the live
+`orchestrator_capabilities` catalog. This includes same-provider and nested
+delegation; native Codex spawning is not used in T3 by this workflow. Outside
+T3, native Codex agents may be used with explicit settings. The launch procedure
+is documented in the `orchestrate` skill; check returned runtime metadata and
+the child thread configuration where available, and report unverified settings.
 
 A worker may be spawned with the highest available supported reasoning effort
 when deeper reasoning is justified by task difficulty, risk, or repeated

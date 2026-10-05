@@ -51,7 +51,7 @@ Never assign overlapping write ownership to concurrent subagents.
 
 ## Worker Selection
 
-Use the repository's Codex custom agents according to their execution boundary:
+Use the repository's worker role definitions according to their execution boundary:
 
 - `explorer` for read-only repository investigation;
 - `implementer` for bounded implementation, testing, and debugging;
@@ -63,8 +63,11 @@ Before dispatch, read the configured worker model and reasoning effort from
 `.codex/config.toml` and the selected role definition. Explicitly select those
 settings in the launch call; a role name or tool description is not evidence
 that the runtime will apply them. Follow the `orchestrate` skill's worker
-launch procedure, including its T3 fallback when native tools cannot select
-the required settings. Do not silently inherit the coordinator's settings.
+launch procedure. In T3 Code, all workers must be T3-owned children launched
+through `delegate_task` with explicit provider, model, and reasoning settings,
+including same-provider and nested delegation. Do not use native Codex spawn
+or custom-role launch tools in T3. Outside T3, native Codex agents may be used
+with explicit settings. Do not silently inherit the coordinator's settings.
 
 Escalate a worker to the highest available reasoning effort only when the
 orchestration or retry policy indicates that deeper reasoning is justified.

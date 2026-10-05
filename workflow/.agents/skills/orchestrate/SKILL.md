@@ -123,14 +123,13 @@ model, or omitted arguments to enforce the repository configuration. Avoid
 inheriting the coordinator's model, reasoning effort, or full conversation.
 
 In T3 Code:
+- This workflow requires T3-owned children for every worker, including
+  same-provider work and nested delegation. Launch them with `delegate_task`;
+  do not use native Codex spawn or custom-role launch tools, even when their
+  descriptions advertise the configured model.
 - Call `orchestrator_capabilities` to discover provider instance IDs, model IDs,
   and supported model options from the live catalog.
-- Prefer native subagent tools for same-provider work only when they can
-  explicitly select the required model and reasoning effort with compact
-  starting context. Use a fresh or limited context mode when required by the
-  native tool to permit model overrides.
-- Otherwise use `delegate_task`, including for same-provider work. Set
-  `target.providerInstanceId`, `target.model`, and the reasoning option in
+- Set `target.providerInstanceId`, `target.model`, and the reasoning option in
   `target.options` using the IDs returned by the catalog. Model options also
   inherit when omitted, so explicitly set the configured reasoning effort.
 - Include the selected role's instructions and execution constraints in the
@@ -139,6 +138,15 @@ In T3 Code:
   that a read-only prompt provides a read-only sandbox.
 - Retain the returned `taskId` for `task_status` and `task_cancel`. Do not use
   top-level thread creation as a substitute for a delegated task.
+- Verify the returned model and use `t3_thread_configuration` on the returned
+  `childThreadId` to check the selected reasoning option when available.
+  Pass this T3-owned delegation requirement to any worker allowed to delegate.
+- If T3 delegation is unavailable, report the blocker; do not fall back to
+  native spawning or create a top-level thread.
+
+Outside T3 Code, native Codex agents may be used with explicit model and
+reasoning settings. Use fresh or limited context when required by the native
+tool to permit those overrides.
 
 Check launch metadata against the requested model and reasoning effort wherever
 the runtime exposes them. If the runtime reports a mismatch, stop the wrong
