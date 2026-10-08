@@ -14,6 +14,10 @@ Investigate the assigned question using targeted search and file reads.
 
 Do not modify repository files.
 
+Preserve the user's runtime and interaction modes. Do not switch a T3 thread
+from auto to supervised (approval-required) or plan mode for investigation. The
+native read-only sandbox is separate from T3's approval mode.
+
 Start broad only enough to locate the relevant area, then narrow quickly.
 Prefer search, symbol references, dependency tracing, and focused file reads
 over indiscriminate repository scanning.

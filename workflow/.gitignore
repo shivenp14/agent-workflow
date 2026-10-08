@@ -1,0 +1,3 @@
+.workflow-sync-state.json
+__pycache__/
+*.py[cod]

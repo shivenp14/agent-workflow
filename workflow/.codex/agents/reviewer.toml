@@ -14,6 +14,10 @@ Review the assigned implementation independently.
 
 Do not modify source files.
 
+Preserve the user's runtime and interaction modes. Do not switch a T3 thread
+from auto to supervised (approval-required) or plan mode for review. The native
+read-only sandbox is separate from T3's approval mode.
+
 Inspect the changed code and enough surrounding implementation to validate each
 finding.
 

@@ -25,6 +25,7 @@ MARKDOWN_END = "<!-- agent-workflow:end -->"
 TOML_BEGIN = "# agent-workflow:begin"
 TOML_END = "# agent-workflow:end"
 OWNED = (
+    ".gitignore",
     "AGENTS.md",
     ".codex/config.toml",
     ".codex/agents/explorer.toml",

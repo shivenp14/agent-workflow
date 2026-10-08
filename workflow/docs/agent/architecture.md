@@ -52,6 +52,15 @@ T3, native Codex agents may be used with explicit settings. The launch procedure
 is documented in the `orchestrate` skill; check returned runtime metadata and
 the child thread configuration where available, and report unverified settings.
 
+Worker model and reasoning are selected explicitly, while the user's runtime
+and interaction modes are preserved. T3 launches pass `runtimeMode: "inherit"`
+and `interactionMode: "inherit"` for all roles and review rounds, including
+nested delegation. Review and exploration must not switch auto to supervised
+(`approval-required`). Native role read-only sandboxes are independent of T3
+approval modes. When T3 has no separate child-scoped read-only control, no-edit
+instructions provide a behavioral boundary; they do not enforce a sandbox.
+Verify child modes against the parent settings observed before launch.
+
 A worker may be spawned with the highest available supported reasoning effort
 when deeper reasoning is justified by task difficulty, risk, or repeated
 reasoning failure.

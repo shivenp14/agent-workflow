@@ -132,14 +132,27 @@ In T3 Code:
 - Set `target.providerInstanceId`, `target.model`, and the reasoning option in
   `target.options` using the IDs returned by the catalog. Model options also
   inherit when omitted, so explicitly set the configured reasoning effort.
+- Preserve the user's runtime and interaction modes for every worker, including
+  reviewers, explorers, nested workers, and subsequent review rounds. Pass
+  `runtimeMode: "inherit"` and `interactionMode: "inherit"` to `delegate_task`.
+  Do not switch the parent or child to supervised (`approval-required`) or plan
+  mode to enforce a no-edit assignment. Change modes only when the user
+  explicitly requests it.
 - Include the selected role's instructions and execution constraints in the
-  bounded task prompt when the tool does not load custom roles. Use available
-  runtime controls to enforce the required execution boundary; do not claim
-  that a read-only prompt provides a read-only sandbox.
+  bounded task prompt when the tool does not load custom roles. For reviewers
+  and explorers, explicitly prohibit file edits and other mutations. The native
+  role's `sandbox_mode = "read-only"` is separate from T3's runtime mode;
+  `approval-required` is not a read-only sandbox. Use a separate child-scoped
+  read-only control if available without changing modes. Otherwise retain the
+  no-edit instructions and report that the boundary is behavioral, not sandbox
+  enforced. Do not claim that a read-only prompt provides a read-only sandbox.
 - Retain the returned `taskId` for `task_status` and `task_cancel`. Do not use
   top-level thread creation as a substitute for a delegated task.
 - Verify the returned model and use `t3_thread_configuration` on the returned
-  `childThreadId` to check the selected reasoning option when available.
+  `childThreadId` to check the selected reasoning option and inherited runtime
+  and interaction modes when available. Compare with the parent's settings
+  observed before launch. If modes differ unexpectedly, stop the mismatched
+  worker and report the discrepancy; do not change the parent's mode to match.
   Pass this T3-owned delegation requirement to any worker allowed to delegate.
 - If T3 delegation is unavailable, report the blocker; do not fall back to
   native spawning or create a top-level thread.

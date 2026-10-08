@@ -165,4 +165,11 @@ implementation.
 
 Do not modify source files.
 
+Preserve the user's runtime and interaction modes. In T3 Code, launch review
+children with `runtimeMode: "inherit"` and `interactionMode: "inherit"`, and
+verify their modes using the `orchestrate` procedure. Do not switch auto to
+supervised (`approval-required`) or plan mode for review. Keep the no-edit
+constraint in the review prompt; approval mode does not enforce a read-only
+sandbox.
+
 Route valid findings back to the implementation owner or coordinator.

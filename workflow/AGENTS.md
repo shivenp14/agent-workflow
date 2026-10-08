@@ -69,6 +69,13 @@ including same-provider and nested delegation. Do not use native Codex spawn
 or custom-role launch tools in T3. Outside T3, native Codex agents may be used
 with explicit settings. Do not silently inherit the coordinator's settings.
 
+Preserve the user's runtime and interaction modes during delegation. In T3,
+pass `runtimeMode: "inherit"` and `interactionMode: "inherit"`, including for
+reviewers and nested workers. A read-only assignment must not switch auto to
+supervised (`approval-required`) or change the parent thread's mode. Native
+read-only sandboxes and T3 approval modes are separate controls; follow the
+orchestration skill's boundary and mode verification procedure.
+
 Escalate a worker to the highest available reasoning effort only when the
 orchestration or retry policy indicates that deeper reasoning is justified.
 
