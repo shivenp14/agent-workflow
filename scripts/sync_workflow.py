@@ -170,6 +170,48 @@ def legacy_candidates(relative: str) -> list[bytes]:
     return list(dict.fromkeys([current, *historical]))
 
 
+def prepare_gitignore(target: Path, rel: str, previous: str | None) -> Change:
+    """Manage workflow ignore rules in a block while preserving project rules."""
+    source = source_bytes(rel)
+    begin, end = TOML_BEGIN.encode(), TOML_END.encode()
+    path = target / rel
+    exists = path.exists() or path.is_symlink()
+    if exists and (path.is_symlink() or not path.is_file()):
+        raise SyncError(f"unsafe target path: {path}")
+    existing = path.read_bytes() if exists else b""
+    region = marker_region(existing, begin, end, rel)
+    if region:
+        managed = region[2]
+        if previous and digest(managed) != previous and managed != source:
+            raise SyncError(f"locally edited managed content: {path}; restore its marked block before syncing")
+        if not previous and managed not in legacy_candidates(rel):
+            raise SyncError(f"unrecorded managed block differs from known workflow versions: {path}")
+        updated = replace_region(existing, region, source, begin, end)
+        action = "update" if updated != existing else "unchanged"
+        return Change(rel, path, updated, digest(source), action)
+
+    candidates = legacy_candidates(rel)
+    # Older syncs recorded the hash of the whole file. Migrate only a known
+    # source version whose exact bytes are the entire file or its saved prefix;
+    # preserve any project-specific suffix byte-for-byte.
+    known = [candidate for candidate in candidates if candidate and existing.startswith(candidate)]
+    exact = [candidate for candidate in known if existing == candidate]
+    migration = max(exact, key=len) if exact else None
+    if migration is None and previous:
+        matching = [candidate for candidate in known if digest(candidate) == previous]
+        if matching:
+            migration = max(matching, key=len)
+    if migration is not None:
+        suffix = existing[len(migration):]
+        updated = marker_wrap(source, begin, end) + suffix
+        return Change(rel, path, updated, digest(source), "migrate")
+
+    # Project rules run last so their negations can override workflow defaults.
+    updated = marker_wrap(source, begin, end) + existing
+    action = "create" if not existing else "update"
+    return Change(rel, path, updated, digest(source), action)
+
+
 def toml_agents_table(data: bytes) -> tuple[int, int, bytes] | None:
     """Locate a simple [agents] table in TOML source text, preserving its bytes."""
     lines = data.splitlines(keepends=True)
@@ -346,6 +388,8 @@ def sync_one(raw: str, registry: dict, dry_run: bool) -> list[str]:
             change = prepare_markdown(target, rel, hashes.get(rel))
         elif rel == ".codex/config.toml":
             change = prepare_toml(target, rel, hashes.get(rel))
+        elif rel == ".gitignore":
+            change = prepare_gitignore(target, rel, hashes.get(rel))
         else:
             source = source_bytes(rel)
             path = target / rel

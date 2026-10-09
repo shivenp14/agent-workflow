@@ -112,6 +112,108 @@ class SyncWorkflowTests(unittest.TestCase):
         with self.assertRaisesRegex(sync.SyncError, "locally edited managed content"):
             sync.sync_one(str(self.target), state, True)
 
+    def test_gitignore_prepends_managed_block_preserves_rules_and_is_idempotent(self):
+        path = self.target / ".gitignore"
+        project_rules = b"# project rules\n.env\n/build/\n"
+        path.write_bytes(project_rules)
+        state = self.registry_value()
+
+        sync.sync_one(str(self.target), state, False)
+        first = path.read_bytes()
+        region = sync.marker_region(first, sync.TOML_BEGIN.encode(), sync.TOML_END.encode(), ".gitignore")
+        self.assertEqual(first[region[1]:], project_rules)
+        self.assertEqual(region[2], sync.source_bytes(".gitignore"))
+        self.assertEqual(state["targets"][str(self.target)]["hashes"][".gitignore"], sync.digest(region[2]))
+        self.assertEqual(sync.sync_one(str(self.target), state, False), [f"unchanged: {self.target}"])
+        self.assertEqual(path.read_bytes(), first)
+
+    def test_gitignore_preserves_project_negation_precedence(self):
+        subprocess.run(["git", "init", "-q", str(self.target)], check=True)
+        path = self.target / ".gitignore"
+        project_rules = b"# Project exception\n!*.py[cod]"
+        path.write_bytes(project_rules)
+        state = self.registry_value()
+        sync.sync_one(str(self.target), state, False)
+        self.assertTrue(path.read_bytes().endswith(project_rules))
+        result = subprocess.run(
+            ["git", "check-ignore", "--no-index", "visible.pyc"],
+            cwd=self.target, capture_output=True,
+        )
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertEqual(sync.sync_one(str(self.target), state, False), [f"unchanged: {self.target}"])
+
+    def test_gitignore_migrates_saved_whole_file_hash_and_preserves_suffix(self):
+        source = sync.source_bytes(".gitignore")
+        suffix = b"\n# local project ignores\n!.venv/keep-me\n"
+        path = self.target / ".gitignore"
+        path.write_bytes(source + suffix)
+        state = self.registry_value({".gitignore": sync.digest(source)})
+
+        sync.sync_one(str(self.target), state, False)
+        migrated = path.read_bytes()
+        region = sync.marker_region(migrated, sync.TOML_BEGIN.encode(), sync.TOML_END.encode(), ".gitignore")
+        self.assertEqual(region[2], source)
+        self.assertTrue(migrated.endswith(suffix))
+        self.assertEqual(state["targets"][str(self.target)]["hashes"][".gitignore"], sync.digest(source))
+        self.assertEqual(sync.sync_one(str(self.target), state, False), [f"unchanged: {self.target}"])
+
+    def test_gitignore_migrates_exact_known_historical_whole_file(self):
+        old = b"__pycache__/\n*.py[cod]\n"
+        current = b".workflow-sync-state.json\n__pycache__/\n*.py[cod]\n"
+        # Exercise the dedicated preparer with isolated known history and source.
+        path = self.target / ".gitignore"
+        path.write_bytes(old)
+        with patch.object(sync, "source_bytes", side_effect=lambda rel: current if rel == ".gitignore" else b""), \
+             patch.object(sync, "legacy_candidates", return_value=[current, old]):
+            change = sync.prepare_gitignore(self.target, ".gitignore", sync.digest(old))
+        self.assertEqual(change.action, "migrate")
+        region = sync.marker_region(change.data, sync.TOML_BEGIN.encode(), sync.TOML_END.encode(), ".gitignore")
+        self.assertEqual(region[2], current)
+
+    def test_gitignore_source_update_preserves_outside_edits(self):
+        state = self.registry_value()
+        sync.sync_one(str(self.target), state, False)
+        path = self.target / ".gitignore"
+        old = path.read_bytes()
+        outside = b"# project local rule\n/local-cache/\n\n"
+        path.write_bytes(old + outside)
+        original_source_bytes = sync.source_bytes
+        updated_source = original_source_bytes(".gitignore") + b"*.local-cache\n"
+
+        def changed_source(rel):
+            return updated_source if rel == ".gitignore" else original_source_bytes(rel)
+
+        with patch.object(sync, "source_bytes", side_effect=changed_source):
+            sync.sync_one(str(self.target), state, False)
+            second = path.read_bytes()
+            region = sync.marker_region(second, sync.TOML_BEGIN.encode(), sync.TOML_END.encode(), ".gitignore")
+            self.assertEqual(region[2], updated_source)
+            self.assertTrue(second.endswith(outside))
+
+    def test_gitignore_rejects_managed_edits_and_malformed_markers(self):
+        state = self.registry_value()
+        sync.sync_one(str(self.target), state, False)
+        path = self.target / ".gitignore"
+        path.write_bytes(path.read_bytes().replace(b"__pycache__/", b"cache-temp/", 1))
+        with self.assertRaisesRegex(sync.SyncError, "locally edited managed content"):
+            sync.sync_one(str(self.target), state, True)
+
+        path.write_bytes(b"# agent-workflow:begin\nonly one marker\n")
+        with self.assertRaisesRegex(sync.SyncError, "malformed or duplicated"):
+            sync.sync_one(str(self.target), state, True)
+
+    def test_gitignore_dry_run_preserves_existing_file_and_hash_state(self):
+        path = self.target / ".gitignore"
+        before = b"# existing project rules\n*.db\n"
+        path.write_bytes(before)
+        state = self.registry_value({"AGENTS.md": "existing-state"})
+        state_before = copy.deepcopy(state)
+
+        plan = sync.sync_one(str(self.target), state, True)
+        self.assertTrue(any(line.startswith("update:") and line.endswith("/.gitignore") for line in plan))
+        self.assertEqual(path.read_bytes(), before)
+        self.assertEqual(state, state_before)
+
     def test_exact_historical_mixed_sources_migrate(self):
         old_agents = b"# Historical workflow policy\n"
         old_config = b"[agents]\nenabled = true\n\nlegacy_default = true\n"
